@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
 
-    const queue = new jiggly.Queue();
+    const timeline = new jiggly.Timeline();
 
     const rect = document.querySelector('rect');
-    queue.rotation(rect, 2000);
-    queue.start();
+    timeline.delay(1000);
+    timeline.rotation(rect, 180, 2000);
+    timeline.start();
 
-    setInterval(() => { queue.tick((new Date()).getTime()) }, 100);
+    setInterval(() => { timeline.tick((new Date()).getTime()) }, 100);
 });

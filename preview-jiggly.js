@@ -4,23 +4,84 @@
  *  The entry file for the whole library.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SVGRotate = exports.Animation = exports.Queue = void 0;
+exports.SVGRotate = exports.Slot = exports.Timeline = void 0;
 // export all public classes
-var Queue_1 = require("./lib/Queue");
-Object.defineProperty(exports, "Queue", { enumerable: true, get: function () { return Queue_1.Queue; } });
-var Animation_1 = require("./lib/Animation");
-Object.defineProperty(exports, "Animation", { enumerable: true, get: function () { return Animation_1.Animation; } });
+var Timeline_1 = require("./lib/Timeline");
+Object.defineProperty(exports, "Timeline", { enumerable: true, get: function () { return Timeline_1.Timeline; } });
+var Slot_1 = require("./lib/Slot");
+Object.defineProperty(exports, "Slot", { enumerable: true, get: function () { return Slot_1.Slot; } });
 var SVGRotate_1 = require("./lib/SVGRotate");
 Object.defineProperty(exports, "SVGRotate", { enumerable: true, get: function () { return SVGRotate_1.SVGRotate; } });
 
-},{"./lib/Animation":2,"./lib/Queue":3,"./lib/SVGRotate":4}],2:[function(require,module,exports){
+},{"./lib/SVGRotate":2,"./lib/Slot":3,"./lib/Timeline":4}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Animation = void 0;
+exports.SVGRotate = void 0;
+const Slot_1 = require("./Slot");
 /**
- *  An animation base class. This class doesn't do anything but serves as an animation base.
+ *  A special animation to rotate an SVG element.
  */
-class Animation {
+class SVGRotate extends Slot_1.Slot {
+    /**
+     *  The constructor.
+     */
+    constructor(elem, degrees) {
+        // call the parent constructor
+        super();
+        /**
+         *  A possible origin position against which we would make the rotation.
+         */
+        this._origin = null;
+        // assign the element
+        this._elem = elem;
+        // assign the degrees
+        this._degrees = degrees;
+    }
+    /**
+     *  Start the animation.
+     */
+    start() {
+        // make the start
+        super.start();
+        // for the tick we need to calculate the origin position of the element
+        const rect = this._elem.getBoundingClientRect();
+        this._origin = new DOMPoint(rect.width / 2, rect.height / 2);
+    }
+    /**
+     *  Tick the animation.
+     */
+    tick(miliseconds) {
+        // check with parent if we should tick
+        if (!super.tick(miliseconds))
+            return false;
+        // create a matrix to start the rotation.
+        const matrix = new DOMMatrix();
+        // make it spin around itself we need to translate the matrix a by
+        // the origin point position
+        if (this._origin)
+            matrix.translateSelf(this._origin.x, this._origin.y);
+        // make a rotation
+        matrix.rotateSelf(this.progress(miliseconds) * this._degrees);
+        // and return to expected position
+        if (this._origin)
+            matrix.translateSelf(-this._origin.x, -this._origin.y);
+        // set the transform on the element
+        this._elem.setAttribute('transform', `matrix(${matrix.a} ${matrix.b} ${matrix.c} ${matrix.d} ${matrix.e} ${matrix.f})`);
+        // it's ok
+        return true;
+    }
+}
+exports.SVGRotate = SVGRotate;
+
+},{"./Slot":3}],3:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Slot = void 0;
+/**
+ *  This is an animation slot. This one doesn't do anything but it can be used as an empty delay
+ *  slot. All other animation slots should be inheriting from this one.
+ */
+class Slot {
     /**
      *  Construct the animation.
      */
@@ -85,59 +146,66 @@ class Animation {
         return true;
     }
 }
-exports.Animation = Animation;
+exports.Slot = Slot;
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Queue = void 0;
+exports.Timeline = void 0;
+const Slot_1 = require("./Slot");
 const SVGRotate_1 = require("./SVGRotate");
 /**
- *  An animation queue.
+ *  An animation timeline.
  */
-class Queue {
+class Timeline {
     /**
      *  The constructor.
      */
     constructor() {
         // create animations
-        this._animations = new Set();
+        this._animations = new Array();
     }
     /**
-     *  IS the animation queue empty?
+     *  IS the animation timeline empty?
      */
     get empty() {
-        return this._animations.size == 0;
+        return this._animations.length == 0;
     }
     /**
-     *  Push an animation on the queue.
+     *  Push an animation on the timeline.
      *
      */
     push(item) {
-        // add animation to the queue
-        this._animations.add(item);
+        // add animation to the timeline
+        this._animations.push(item);
     }
     /**
-     *  Tick the queue.
+     *  Tick the timeline.
      */
     tick(miliseconds) {
-        // iterate over the animation to tick them all
-        for (let item of this._animations) {
-            // tick the animation
-            item.tick(miliseconds);
-            // if the animation is done we can remove it from the queue
-            if (item.done)
-                this._animations.delete(item);
-        }
+        var _a;
+        // nothing to animate?
+        if (this.empty)
+            return;
+        // get the current animation in the timeline
+        const animation = this._animations[0];
+        // tick the current animation
+        animation.tick(miliseconds);
+        // if the animation is not done then we are ok here
+        if (!animation.done)
+            return;
+        // remove the first element
+        this._animations.shift();
+        // start next animation
+        (_a = this._animations[0]) === null || _a === void 0 ? void 0 : _a.start();
     }
     /**
      *  Create a rotation animation on an element.
-     *  @param elem
      */
-    rotation(elem, duration = undefined) {
+    rotation(elem, degrees, duration = undefined) {
         // construct an animation
-        const animation = new SVGRotate_1.SVGRotate(elem);
-        // push the animation inside our queue
+        const animation = new SVGRotate_1.SVGRotate(elem, degrees);
+        // push the animation inside our timeline
         this.push(animation);
         // set the duration if we have one
         if (duration)
@@ -146,75 +214,30 @@ class Queue {
         return animation;
     }
     /**
-     *  Start the queue.
+     *  Create a delay.
+     */
+    delay(duration) {
+        // create a slot
+        const slot = new Slot_1.Slot();
+        // push the slot
+        this.push(slot);
+        // set the durattion
+        slot.duration(duration);
+        // return the slot
+        return slot;
+    }
+    /**
+     *  Start the timeline.
      */
     start() {
-        // start all animation
-        for (let item of this._animations)
-            item.start();
+        var _a;
+        // start the first animation
+        (_a = this._animations[0]) === null || _a === void 0 ? void 0 : _a.start();
     }
 }
-exports.Queue = Queue;
+exports.Timeline = Timeline;
 ;
 
-},{"./SVGRotate":4}],4:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.SVGRotate = void 0;
-const Animation_1 = require("./Animation");
-/**
- *  A special animation to rotate an SVG element.
- */
-class SVGRotate extends Animation_1.Animation {
-    /**
-     *  The constructor.
-     */
-    constructor(elem) {
-        // call the parent constructor
-        super();
-        /**
-         *  A possible origin position against which we would make the rotation.
-         */
-        this._origin = null;
-        // assign the element
-        this._elem = elem;
-    }
-    /**
-     *  Start the animation.
-     */
-    start() {
-        // make the start
-        super.start();
-        // for the tick we need to calculate the origin position of the element
-        const rect = this._elem.getBoundingClientRect();
-        this._origin = new DOMPoint(rect.width / 2, rect.height / 2);
-    }
-    /**
-     *  Tick the animation.
-     */
-    tick(miliseconds) {
-        // check with parent if we should tick
-        if (!super.tick(miliseconds))
-            return false;
-        // create a matrix to start the rotation.
-        const matrix = new DOMMatrix();
-        // make it spin around itself we need to translate the matrix a by
-        // the origin point position
-        if (this._origin)
-            matrix.translateSelf(this._origin.x, this._origin.y);
-        // make a rotation
-        matrix.rotateSelf(this.progress(miliseconds) * 360);
-        // and return to expected position
-        if (this._origin)
-            matrix.translateSelf(-this._origin.x, -this._origin.y);
-        // set the transform on the element
-        this._elem.setAttribute('transform', `matrix(${matrix.a} ${matrix.b} ${matrix.c} ${matrix.d} ${matrix.e} ${matrix.f})`);
-        // it's ok
-        return true;
-    }
-}
-exports.SVGRotate = SVGRotate;
-
-},{"./Animation":2}],5:[function(require,module,exports){
+},{"./SVGRotate":2,"./Slot":3}],5:[function(require,module,exports){
 window.jiggly = require('./build/jiggly.js');
 },{"./build/jiggly.js":1}]},{},[5]);

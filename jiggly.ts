@@ -3,6 +3,6 @@
  */
 
 // export all public classes
-export { Queue } from "./lib/Queue";
-export { Animation } from "./lib/Animation";
+export { Timeline } from "./lib/Timeline";
+export { Slot } from "./lib/Slot";
 export { SVGRotate} from "./lib/SVGRotate";

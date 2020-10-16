@@ -1,8 +1,8 @@
-import { Animation } from "./Animation";
+import { Slot } from "./Slot";
 /**
  *  A special animation to rotate an SVG element.
  */
-export class SVGRotate extends Animation {
+export class SVGRotate extends Slot {
 
     /**
      *  The SVG element to rotate.
@@ -15,15 +15,23 @@ export class SVGRotate extends Animation {
     private _origin:DOMPoint|null = null;
 
     /**
+     *  By how many degrees the animation should rotate
+     */
+    private _degrees:number;
+
+    /**
      *  The constructor.
      */
-    public constructor(elem:SVGElement) {
+    public constructor(elem:SVGElement, degrees:number) {
 
         // call the parent constructor
         super();
 
         // assign the element
         this._elem = elem;
+
+        // assign the degrees
+        this._degrees = degrees;
     }
 
     /**
@@ -55,7 +63,7 @@ export class SVGRotate extends Animation {
         if (this._origin) matrix.translateSelf(this._origin.x, this._origin.y);
 
         // make a rotation
-        matrix.rotateSelf(this.progress(miliseconds) * 360);
+        matrix.rotateSelf(this.progress(miliseconds) * this._degrees);
 
         // and return to expected position
         if (this._origin) matrix.translateSelf(-this._origin.x, -this._origin.y);

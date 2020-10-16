@@ -1,7 +1,8 @@
 /**
- *  An animation base class. This class doesn't do anything but serves as an animation base.
+ *  This is an animation slot. This one doesn't do anything but it can be used as an empty delay
+ *  slot. All other animation slots should be inheriting from this one.
  */
-export class Animation {
+export class Slot {
 
     /**
      *  The milisecond timestamp of the start of the animation.
