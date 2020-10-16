@@ -1,0 +1,1 @@
+window.jiggly = require('./build/jiggly.js');
