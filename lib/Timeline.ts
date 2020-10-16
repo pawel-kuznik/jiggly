@@ -1,8 +1,9 @@
 import { Slot } from "./Slot";
 import { SVGRotate } from "./SVGRotate";
-
 /**
- *  An animation timeline.
+ *  An animation timeline. A timeline allows to schedule a series of animation
+ *  slots to be ran in sequence. If slots needs to be run concurently, then you
+ *  need to use a runner and create more timelines on an instance of a runner.
  */
 export class Timeline {
 
