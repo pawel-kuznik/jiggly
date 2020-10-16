@@ -4,7 +4,7 @@
  *  The entry file for the whole library.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SVGRotate = exports.Slot = exports.Timeline = void 0;
+exports.Runner = exports.SVGRotate = exports.Slot = exports.Timeline = void 0;
 // export all public classes
 var Timeline_1 = require("./lib/Timeline");
 Object.defineProperty(exports, "Timeline", { enumerable: true, get: function () { return Timeline_1.Timeline; } });
@@ -12,8 +12,72 @@ var Slot_1 = require("./lib/Slot");
 Object.defineProperty(exports, "Slot", { enumerable: true, get: function () { return Slot_1.Slot; } });
 var SVGRotate_1 = require("./lib/SVGRotate");
 Object.defineProperty(exports, "SVGRotate", { enumerable: true, get: function () { return SVGRotate_1.SVGRotate; } });
+var Runner_1 = require("./lib/Runner");
+Object.defineProperty(exports, "Runner", { enumerable: true, get: function () { return Runner_1.Runner; } });
 
-},{"./lib/SVGRotate":2,"./lib/Slot":3,"./lib/Timeline":4}],2:[function(require,module,exports){
+},{"./lib/Runner":2,"./lib/SVGRotate":3,"./lib/Slot":4,"./lib/Timeline":5}],2:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Runner = void 0;
+const Timeline_1 = require("./Timeline");
+/**
+ *  This is a class responsible for actually running animations.
+ */
+class Runner {
+    constructor() {
+        /**
+         *  The timelines this runner rans.
+         */
+        this._timelines = new Array();
+        /**
+         *  Is the runner running?
+         */
+        this._running = false;
+    }
+    /**
+     *  Get the default timeline.
+     */
+    get main() {
+        // return the timeline
+        if (!this._timelines[0])
+            this._timelines.push(new Timeline_1.Timeline());
+        // return the main timeline
+        return this._timelines[0];
+    }
+    /**
+     *  Start the runner.
+     */
+    start() {
+        // mark the runner as running
+        this._running = true;
+        // start all timelines
+        for (let timeline of this._timelines)
+            timeline.start();
+        // a callback that will run on next animation frame
+        const callback = (miliseconds) => {
+            // noop
+            if (!this._running)
+                return;
+            // iterate over all timelines and tick them
+            for (let timeline of this._timelines)
+                timeline.tick(miliseconds);
+            // request next frame
+            window.requestAnimationFrame(callback);
+        };
+        // make the initial request
+        window.requestAnimationFrame(callback);
+    }
+    /**
+     *  Stop the runner.
+     */
+    stop() {
+        // just mark it as not running
+        this._running = false;
+    }
+}
+exports.Runner = Runner;
+
+},{"./Timeline":5}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SVGRotate = void 0;
@@ -73,7 +137,7 @@ class SVGRotate extends Slot_1.Slot {
 }
 exports.SVGRotate = SVGRotate;
 
-},{"./Slot":3}],3:[function(require,module,exports){
+},{"./Slot":4}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Slot = void 0;
@@ -95,14 +159,11 @@ class Slot {
      *  Is the animation done?
      */
     get done() {
-        // never setup? then it's not done
-        if (this._start == null || this._duration == null)
-            return false;
         // never ran? then it's not done
         if (this._last == null)
             return false;
-        // if the last run is after the duration we can say that it's done
-        return this._last >= (this._start + this._duration);
+        // if progress is more or equal 1 then it's done
+        return this.progress(this._last) >= 1;
     }
     /**
      *  The progress of animation in 0..1 range.
@@ -123,7 +184,7 @@ class Slot {
      */
     start() {
         // get current miliseconds and assign it as start
-        this._start = (new Date()).getTime();
+        this._start = window.performance.now();
     }
     /**
      *  Set the duration.
@@ -148,7 +209,7 @@ class Slot {
 }
 exports.Slot = Slot;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Timeline = void 0;
@@ -238,6 +299,6 @@ class Timeline {
 exports.Timeline = Timeline;
 ;
 
-},{"./SVGRotate":2,"./Slot":3}],5:[function(require,module,exports){
+},{"./SVGRotate":3,"./Slot":4}],6:[function(require,module,exports){
 window.jiggly = require('./build/jiggly.js');
-},{"./build/jiggly.js":1}]},{},[5]);
+},{"./build/jiggly.js":1}]},{},[6]);

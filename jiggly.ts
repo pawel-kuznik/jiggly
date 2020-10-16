@@ -6,3 +6,4 @@
 export { Timeline } from "./lib/Timeline";
 export { Slot } from "./lib/Slot";
 export { SVGRotate} from "./lib/SVGRotate";
+export { Runner } from "./lib/Runner";

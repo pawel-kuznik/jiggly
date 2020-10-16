@@ -35,14 +35,11 @@ export class Slot {
      */
     public get done() : boolean {
 
-        // never setup? then it's not done
-        if (this._start == null || this._duration == null) return false;
-
         // never ran? then it's not done
         if (this._last == null) return false;
 
-        // if the last run is after the duration we can say that it's done
-        return this._last >= (this._start + this._duration);
+        // if progress is more or equal 1 then it's done
+        return this.progress(this._last) >= 1;
     }
 
     /**
@@ -68,7 +65,7 @@ export class Slot {
     public start() {
 
         // get current miliseconds and assign it as start
-        this._start = (new Date()).getTime();
+        this._start = window.performance.now();
     }
 
     /**
