@@ -1,8 +1,8 @@
 import { Slot } from "./Slot";
 /**
- *  A special animation to rotate an SVG element.
+ *  This is a slot class representing an SVG transformation.
  */
-export class SVGRotate extends Slot {
+export class SVGTransform extends Slot {
 
     /**
      *  The SVG element to rotate.
@@ -10,28 +10,38 @@ export class SVGRotate extends Slot {
     private _elem:SVGElement;
 
     /**
-     *  A possible origin position against which we would make the rotation.
+     *  A possible origin position against which we would make the transform.
+     *  This makes sense only for things like skew or rotate.
      */
     private _origin:DOMPoint|null = null;
 
     /**
-     *  By how many degrees the animation should rotate
+     *  The rotate by specific number of degrees.
      */
-    private _degrees:number;
+    private _rotation:number = 0;
 
     /**
      *  The constructor.
+     *  @param SVGElement   The element on which to perform the transform
+     *  @param persist      Should the transform persist the transform for further tranformations?
      */
-    public constructor(elem:SVGElement, degrees:number) {
+    public constructor(elem:SVGElement, persist:boolean = true) {
 
         // call the parent constructor
         super();
 
         // assign the element
         this._elem = elem;
+    }
 
-        // assign the degrees
-        this._degrees = degrees;
+    /**
+     *  Rotate the element by certain number of degrees.
+     *  @param degrees 
+     */
+    public setRotation(degrees:number) {
+
+        // set the degrees
+        this._rotation = degrees;
     }
 
     /**
@@ -44,7 +54,7 @@ export class SVGRotate extends Slot {
 
         // for the tick we need to calculate the origin position of the element
         const rect = this._elem.getBoundingClientRect();
-        this._origin = new DOMPoint(rect.width / 2, rect.height / 2)
+        this._origin = new DOMPoint(rect.width / 2, rect.height / 2);   
     }
 
     /**
@@ -62,8 +72,11 @@ export class SVGRotate extends Slot {
         // the origin point position
         if (this._origin) matrix.translateSelf(this._origin.x, this._origin.y);
 
+        // calculate the value
+        const value = this.value(miliseconds);
+
         // make a rotation
-        matrix.rotateSelf(this.value(miliseconds) * this._degrees);
+        if (this._rotation) matrix.rotateSelf(value * this._rotation);
 
         // and return to expected position
         if (this._origin) matrix.translateSelf(-this._origin.x, -this._origin.y);
@@ -74,4 +87,4 @@ export class SVGRotate extends Slot {
         // it's ok
         return true;
     }
-}
+};

@@ -1,5 +1,5 @@
 import { Slot } from "./Slot";
-import { SVGRotate } from "./SVGRotate";
+import { SVGTransform } from "./SVGTransform";
 /**
  *  An animation timeline. A timeline allows to schedule a series of animation
  *  slots to be ran in sequence. If slots needs to be run concurently, then you
@@ -65,13 +65,16 @@ export class Timeline {
     /**
      *  Create a rotation animation on an element.
      */
-    public rotation(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : SVGRotate {
+    public rotation(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : SVGTransform {
 
         // construct an animation
-        const animation = new SVGRotate(elem, degrees);
+        const animation = new SVGTransform(elem, true);
 
         // push the animation inside our timeline
         this.push(animation);
+
+        // set the rotation
+        animation.setRotation(degrees);
 
         // set the duration if we have one
         if (duration) animation.setDuration(duration);
