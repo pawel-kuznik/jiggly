@@ -21,7 +21,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Runner = void 0;
 const Timeline_1 = require("./Timeline");
 /**
- *  This is a class responsible for actually running animations.
+ *  This is a class responsible for actually running animations. Runner has a collection
+ *  of timelines that should be ran concurrently to each other.
+ *
+ *  @todo create a possibility to make more than one animation timeline
  */
 class Runner {
     constructor() {
@@ -51,6 +54,10 @@ class Runner {
         // mark the runner as running
         this._running = true;
         // start all timelines
+        // @todo this might cause some odd timing issues. Since start will call performance.now() it might be that
+        // the timelines will get out of sync. The difference would be minimal (a milisecond or so) but with more
+        // complicated timelines it might produce really off results. It would be better to pass the start point
+        // to the timelines and slots.
         for (let timeline of this._timelines)
             timeline.start();
         // a callback that will run on next animation frame
@@ -104,9 +111,9 @@ class SVGRotate extends Slot_1.Slot {
     /**
      *  Start the animation.
      */
-    start() {
+    start(miliseconds) {
         // make the start
-        super.start();
+        super.start(miliseconds);
         // for the tick we need to calculate the origin position of the element
         const rect = this._elem.getBoundingClientRect();
         this._origin = new DOMPoint(rect.width / 2, rect.height / 2);
@@ -125,7 +132,7 @@ class SVGRotate extends Slot_1.Slot {
         if (this._origin)
             matrix.translateSelf(this._origin.x, this._origin.y);
         // make a rotation
-        matrix.rotateSelf(this.progress(miliseconds) * this._degrees);
+        matrix.rotateSelf(this.value(miliseconds) * this._degrees);
         // and return to expected position
         if (this._origin)
             matrix.translateSelf(-this._origin.x, -this._origin.y);
@@ -166,6 +173,20 @@ class Slot {
         return this.progress(this._last) >= 1;
     }
     /**
+     *  At which timestamp the slot started?
+     */
+    get started() {
+        // retur the start point
+        return this._start;
+    }
+    /**
+     *  The duration of the slot.
+     */
+    get duration() {
+        // the actual duration or 0
+        return this._duration || 0;
+    }
+    /**
      *  The progress of animation in 0..1 range.
      */
     progress(miliseconds) {
@@ -180,16 +201,27 @@ class Slot {
         return Math.min(current / this._duration, 1);
     }
     /**
-     *  Start the animation.
+     *  The value of the animation at given miliseconds time.
+     *  @param miliseconds
      */
-    start() {
+    value(miliseconds) {
+        // right now it only reports the progress and just acts as an linear function, but
+        // at later time we will need to implement more timing functions.
+        return this.progress(miliseconds);
+    }
+    /**
+     *  Start the animation at given timestamp. This method is meant to be called by
+     *  the timeline (or other scheduling mechanism). The client code shouldn't call
+     *  this.
+     */
+    start(miliseconds) {
         // get current miliseconds and assign it as start
-        this._start = window.performance.now();
+        this._start = miliseconds;
     }
     /**
      *  Set the duration.
      */
-    duration(miliseconds) {
+    setDuration(miliseconds) {
         // assign the miliseconds
         this._duration = miliseconds;
     }
@@ -216,7 +248,9 @@ exports.Timeline = void 0;
 const Slot_1 = require("./Slot");
 const SVGRotate_1 = require("./SVGRotate");
 /**
- *  An animation timeline.
+ *  An animation timeline. A timeline allows to schedule a series of animation
+ *  slots to be ran in sequence. If slots needs to be run concurently, then you
+ *  need to use a runner and create more timelines on an instance of a runner.
  */
 class Timeline {
     /**
@@ -258,7 +292,7 @@ class Timeline {
         // remove the first element
         this._animations.shift();
         // start next animation
-        (_a = this._animations[0]) === null || _a === void 0 ? void 0 : _a.start();
+        (_a = this._animations[0]) === null || _a === void 0 ? void 0 : _a.start(animation.started + animation.duration);
     }
     /**
      *  Create a rotation animation on an element.
@@ -270,7 +304,7 @@ class Timeline {
         this.push(animation);
         // set the duration if we have one
         if (duration)
-            animation.duration(duration);
+            animation.setDuration(duration);
         // return the animation
         return animation;
     }
@@ -283,7 +317,7 @@ class Timeline {
         // push the slot
         this.push(slot);
         // set the durattion
-        slot.duration(duration);
+        slot.setDuration(duration);
         // return the slot
         return slot;
     }
@@ -293,7 +327,7 @@ class Timeline {
     start() {
         var _a;
         // start the first animation
-        (_a = this._animations[0]) === null || _a === void 0 ? void 0 : _a.start();
+        (_a = this._animations[0]) === null || _a === void 0 ? void 0 : _a.start(window.performance.now());
     }
 }
 exports.Timeline = Timeline;

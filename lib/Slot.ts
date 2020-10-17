@@ -43,6 +43,24 @@ export class Slot {
     }
 
     /**
+     *  At which timestamp the slot started?
+     */
+    public get started() : number|null {
+
+        // retur the start point
+        return this._start;
+    }
+
+    /**
+     *  The duration of the slot.
+     */
+    public get duration() : number {
+
+        // the actual duration or 0
+        return this._duration || 0;
+    }
+
+    /**
      *  The progress of animation in 0..1 range.
      */
     public progress(miliseconds:number) : number {
@@ -60,18 +78,31 @@ export class Slot {
     }
 
     /**
-     *  Start the animation.
+     *  The value of the animation at given miliseconds time.
+     *  @param miliseconds 
      */
-    public start() {
+    public value(miliseconds:number) : number {
+
+        // right now it only reports the progress and just acts as an linear function, but
+        // at later time we will need to implement more timing functions.
+        return this.progress(miliseconds);
+    }
+
+    /**
+     *  Start the animation at given timestamp. This method is meant to be called by
+     *  the timeline (or other scheduling mechanism). The client code shouldn't call
+     *  this.
+     */
+    public start(miliseconds:number) {
 
         // get current miliseconds and assign it as start
-        this._start = window.performance.now();
+        this._start = miliseconds;
     }
 
     /**
      *  Set the duration.
      */
-    public duration(miliseconds:number) {
+    public setDuration(miliseconds:number) {
 
         // assign the miliseconds
         this._duration = miliseconds;

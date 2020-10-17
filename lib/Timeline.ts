@@ -59,7 +59,7 @@ export class Timeline {
         this._animations.shift();
 
         // start next animation
-        this._animations[0]?.start();
+        this._animations[0]?.start(animation.started as number + animation.duration);
     }
 
     /**
@@ -74,7 +74,7 @@ export class Timeline {
         this.push(animation);
 
         // set the duration if we have one
-        if (duration) animation.duration(duration);
+        if (duration) animation.setDuration(duration);
 
         // return the animation
         return animation;
@@ -92,7 +92,7 @@ export class Timeline {
         this.push(slot);
 
         // set the durattion
-        slot.duration(duration);
+        slot.setDuration(duration);
 
         // return the slot
         return slot;
@@ -104,6 +104,6 @@ export class Timeline {
     public start() {
 
         // start the first animation
-        this._animations[0]?.start();
+        this._animations[0]?.start(window.performance.now());
     }
 };

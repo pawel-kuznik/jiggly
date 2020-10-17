@@ -37,10 +37,10 @@ export class SVGRotate extends Slot {
     /**
      *  Start the animation.
      */
-    public start() {
+    public start(miliseconds:number) {
 
         // make the start
-        super.start();
+        super.start(miliseconds);
 
         // for the tick we need to calculate the origin position of the element
         const rect = this._elem.getBoundingClientRect();
@@ -63,7 +63,7 @@ export class SVGRotate extends Slot {
         if (this._origin) matrix.translateSelf(this._origin.x, this._origin.y);
 
         // make a rotation
-        matrix.rotateSelf(this.progress(miliseconds) * this._degrees);
+        matrix.rotateSelf(this.value(miliseconds) * this._degrees);
 
         // and return to expected position
         if (this._origin) matrix.translateSelf(-this._origin.x, -this._origin.y);
