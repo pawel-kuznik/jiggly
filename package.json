@@ -2,7 +2,7 @@
   "name": "jiggly",
   "version": "1.0.0",
   "description": "",
-  "main": "build/index.js",
+  "main": "build/jiggly.js",
   "types": "build/jiggly.d.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
