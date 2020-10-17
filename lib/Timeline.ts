@@ -84,6 +84,18 @@ export class Timeline {
     }
 
     /**
+     *  Rotate an element by certain number of degrees.
+     */
+    public rotateBy(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : Timeline {
+
+        // create rotation
+        this.rotation(elem, degrees, duration);
+
+        // allow chaining
+        return this;
+    }
+
+    /**
      *  Create a delay.
      */
     public delay(duration:number) : Slot {
@@ -99,6 +111,18 @@ export class Timeline {
 
         // return the slot
         return slot;
+    }
+
+    /**
+     *  Delay by certain number of miliseconds.
+     */
+    public delayBy(duration:number) : Timeline {
+
+        // create duration
+        this.delay(duration);
+
+        // allow chaining
+        return this;
     }
 
     /**

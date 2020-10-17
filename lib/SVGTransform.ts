@@ -21,6 +21,11 @@ export class SVGTransform extends Slot {
     private _rotation:number = 0;
 
     /**
+     *  A potential array of inits.
+     */
+    private _init:Array<number>|null = null;
+
+    /**
      *  The constructor.
      *  @param SVGElement   The element on which to perform the transform
      *  @param persist      Should the transform persist the transform for further tranformations?
@@ -54,7 +59,16 @@ export class SVGTransform extends Slot {
 
         // for the tick we need to calculate the origin position of the element
         const rect = this._elem.getBoundingClientRect();
-        this._origin = new DOMPoint(rect.width / 2, rect.height / 2);   
+        this._origin = new DOMPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+
+        // a regex to get the matrix directive
+        const initxRegex = /matrix\((\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+)\)/ig;
+
+        // a regext to detect if we have a matrix
+        const matches = initxRegex.exec(this._elem.getAttribute('transform') || '');
+
+        // do we have matches? then construct inits for the matrix
+        if (matches) this._init = Array.from(matches).slice(1, 7).map((input:string) => Number(input));
     }
 
     /**
@@ -66,7 +80,7 @@ export class SVGTransform extends Slot {
         if (!super.tick(miliseconds)) return false;
 
         // create a matrix to start the rotation.
-        const matrix = new DOMMatrix();
+        const matrix = this._init ? new DOMMatrix(this._init) : new DOMMatrix();
 
         // make it spin around itself we need to translate the matrix a by
         // the origin point position
