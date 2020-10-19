@@ -1,5 +1,5 @@
 import { Slot } from "./Slot";
-import { SVGTransform } from "./SVGTransform";
+import { SVGTransformSlot } from "./SVGTransformSlot";
 /**
  *  An animation timeline. A timeline allows to schedule a series of animation
  *  slots to be ran in sequence. If slots needs to be run concurently, then you
@@ -65,10 +65,10 @@ export class Timeline {
     /**
      *  Create a rotation animation on an element.
      */
-    public rotation(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : SVGTransform {
+    public rotation(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : SVGTransformSlot {
 
         // construct an animation
-        const animation = new SVGTransform(elem, true);
+        const animation = new SVGTransformSlot(elem, true);
 
         // push the animation inside our timeline
         this.push(animation);

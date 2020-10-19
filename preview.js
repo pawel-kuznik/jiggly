@@ -10,9 +10,9 @@ document.addEventListener('DOMContentLoaded', function() {
         .delayBy(500)
         .rotateBy(rect, 120, 1000)
         .delayBy(500)
-        .rotateBy(rect, 120, 1000)
+        .rotateBy(rect, -120, 1000)
         .delayBy(500)
-        .rotateBy(rect, 120, 1000);
+        .rotateBy(rect, 270, 1000);
 
     runner.start();
 });

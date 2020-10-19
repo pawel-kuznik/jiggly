@@ -4,18 +4,18 @@
  *  The entry file for the whole library.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Runner = exports.SVGTransform = exports.Slot = exports.Timeline = void 0;
+exports.Runner = exports.SVGTransformSlot = exports.Slot = exports.Timeline = void 0;
 // export all public classes
 var Timeline_1 = require("./lib/Timeline");
 Object.defineProperty(exports, "Timeline", { enumerable: true, get: function () { return Timeline_1.Timeline; } });
 var Slot_1 = require("./lib/Slot");
 Object.defineProperty(exports, "Slot", { enumerable: true, get: function () { return Slot_1.Slot; } });
-var SVGTransform_1 = require("./lib/SVGTransform");
-Object.defineProperty(exports, "SVGTransform", { enumerable: true, get: function () { return SVGTransform_1.SVGTransform; } });
+var SVGTransformSlot_1 = require("./lib/SVGTransformSlot");
+Object.defineProperty(exports, "SVGTransformSlot", { enumerable: true, get: function () { return SVGTransformSlot_1.SVGTransformSlot; } });
 var Runner_1 = require("./lib/Runner");
 Object.defineProperty(exports, "Runner", { enumerable: true, get: function () { return Runner_1.Runner; } });
 
-},{"./lib/Runner":2,"./lib/SVGTransform":3,"./lib/Slot":4,"./lib/Timeline":5}],2:[function(require,module,exports){
+},{"./lib/Runner":2,"./lib/SVGTransformSlot":3,"./lib/Slot":4,"./lib/Timeline":5}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Runner = void 0;
@@ -87,12 +87,12 @@ exports.Runner = Runner;
 },{"./Timeline":5}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SVGTransform = void 0;
+exports.SVGTransformSlot = void 0;
 const Slot_1 = require("./Slot");
 /**
- *  This is a slot class representing an SVG transformation.
+ *  This is a slot class representing an SVG transformation slot.
  */
-class SVGTransform extends Slot_1.Slot {
+class SVGTransformSlot extends Slot_1.Slot {
     /**
      *  The constructor.
      *  @param SVGElement   The element on which to perform the transform
@@ -111,7 +111,7 @@ class SVGTransform extends Slot_1.Slot {
          */
         this._rotation = 0;
         /**
-         *  A potential array of inits.
+         *  A potential initial SVG transform.
          */
         this._init = null;
         // assign the element
@@ -131,18 +131,11 @@ class SVGTransform extends Slot_1.Slot {
     start(miliseconds) {
         // make the start
         super.start(miliseconds);
-        // for the tick we need to calculate the origin position of the element
-        const rect = this._elem.getBoundingClientRect();
-        this._origin = new DOMPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-        console.log(rect);
-        console.log(rect.x + rect.width / 2, rect.y + rect.height / 2);
-        // a regex to get the matrix directive
-        const initxRegex = /matrix\((\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+) (\-?[0-9\.]+)\)/ig;
-        // a regext to detect if we have a matrix
-        const matches = initxRegex.exec(this._elem.getAttribute('transform') || '');
+        // get the current base values of transforms
+        const transforms = this._elem.transform.baseVal;
         // do we have matches? then construct inits for the matrix
-        if (matches)
-            this._init = Array.from(matches).slice(1, 7).map((input) => Number(input));
+        if (transforms.numberOfItems > 0)
+            this._init = transforms.consolidate();
     }
     /**
      *  Tick the animation.
@@ -151,29 +144,34 @@ class SVGTransform extends Slot_1.Slot {
         // check with parent if we should tick
         if (!super.tick(miliseconds))
             return false;
-        // create a matrix to start the rotation.
-        const matrix = this._init ? new DOMMatrix(this._init) : new DOMMatrix();
-        if (this._origin)
-            console.log(this._origin.x, this._origin.y);
-        // make it spin around itself we need to translate the matrix a by
-        // the origin point position
-        if (this._origin)
-            matrix.translateSelf(this._origin.x, this._origin.y);
-        // calculate the value
+        // get the current value
         const value = this.value(miliseconds);
-        // make a rotation
-        if (this._rotation)
-            matrix.rotateSelf(value * this._rotation);
-        // and return to expected position
-        if (this._origin)
-            matrix.translateSelf(-this._origin.x, -this._origin.y);
-        // set the transform on the element
-        this._elem.setAttribute('transform', `matrix(${matrix.a} ${matrix.b} ${matrix.c} ${matrix.d} ${matrix.e} ${matrix.f})`);
+        // get the base values of transforms
+        const transforms = this._elem.transform.baseVal;
+        // get the owner SVG element so we can create transforms
+        const owner = this._elem.ownerSVGElement;
+        // do nothing if there is no root
+        if (!owner)
+            return true;
+        // get current bounding box
+        const bb = this._elem.getBBox();
+        // should we initialisze transforms?
+        if (this._init)
+            transforms.initialize(this._init);
+        else
+            transforms.clear();
+        // should we rotate?
+        if (this._rotation) {
+            // create a rotate transform
+            const rotate = owner.createSVGTransform();
+            rotate.setRotate(this._rotation * value, bb.x + bb.width / 2, bb.y + bb.height / 2);
+            transforms.appendItem(rotate);
+        }
         // it's ok
         return true;
     }
 }
-exports.SVGTransform = SVGTransform;
+exports.SVGTransformSlot = SVGTransformSlot;
 ;
 
 },{"./Slot":4}],4:[function(require,module,exports){
@@ -278,7 +276,7 @@ exports.Slot = Slot;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Timeline = void 0;
 const Slot_1 = require("./Slot");
-const SVGTransform_1 = require("./SVGTransform");
+const SVGTransformSlot_1 = require("./SVGTransformSlot");
 /**
  *  An animation timeline. A timeline allows to schedule a series of animation
  *  slots to be ran in sequence. If slots needs to be run concurently, then you
@@ -331,7 +329,7 @@ class Timeline {
      */
     rotation(elem, degrees, duration = undefined) {
         // construct an animation
-        const animation = new SVGTransform_1.SVGTransform(elem, true);
+        const animation = new SVGTransformSlot_1.SVGTransformSlot(elem, true);
         // push the animation inside our timeline
         this.push(animation);
         // set the rotation
@@ -385,6 +383,6 @@ class Timeline {
 exports.Timeline = Timeline;
 ;
 
-},{"./SVGTransform":3,"./Slot":4}],6:[function(require,module,exports){
+},{"./SVGTransformSlot":3,"./Slot":4}],6:[function(require,module,exports){
 window.jiggly = require('./build/jiggly.js');
 },{"./build/jiggly.js":1}]},{},[6]);
