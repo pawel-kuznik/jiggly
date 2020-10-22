@@ -1,5 +1,6 @@
 import { Slot } from "./Slot";
 import { SVGTransformSlot } from "./SVGTransformSlot";
+import { SVGToRotationSlot } from "./SVGToRotationSlot";
 /**
  *  An animation timeline. A timeline allows to schedule a series of animation
  *  slots to be ran in sequence. If slots needs to be run concurently, then you
@@ -84,12 +85,48 @@ export class Timeline {
     }
 
     /**
+     *  Create a rotation animation on an element to a specific degree value.
+     */
+    public toRotation(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : SVGTransformSlot {
+
+        // construct an animation
+        const animation = new SVGToRotationSlot(elem, true);
+
+        // push the animation inside our timeline
+        this.push(animation);
+
+        // set the target rotation
+        animation.setTargetRotation(degrees);
+
+        // set the duration if we have one
+        if (duration) animation.setDuration(duration);
+
+        // return the animation
+        return animation;
+    }
+
+    /**
      *  Rotate an element by certain number of degrees.
      */
     public rotateBy(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : Timeline {
 
         // create rotation
         this.rotation(elem, degrees, duration);
+
+        // allow chaining
+        return this;
+    }
+
+    /**
+     *  Rotate an element to certain rotation from original position.
+     * @param elem 
+     * @param degrees 
+     * @param duration 
+     */
+    public rotateTo(elem:SVGElement, degrees:number, duration:number|undefined = undefined) : Timeline {
+
+        // animate to a certain rotation
+        this.toRotation(elem, degrees, duration);
 
         // allow chaining
         return this;

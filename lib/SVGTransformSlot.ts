@@ -34,6 +34,11 @@ export class SVGTransformSlot extends Slot {
     }
 
     /**
+     *  Get the element that is transformed in this slot.
+     */
+    get elem() : SVGElement { return this._elem; };
+
+    /**
      *  Rotate the element by certain number of degrees.
      *  @param degrees 
      */

@@ -4,7 +4,7 @@
  *  The entry file for the whole library.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Runner = exports.SVGTransformSlot = exports.Slot = exports.Timeline = void 0;
+exports.Runner = exports.SVGToRotationSlot = exports.SVGTransformSlot = exports.Slot = exports.Timeline = void 0;
 // export all public classes
 var Timeline_1 = require("./lib/Timeline");
 Object.defineProperty(exports, "Timeline", { enumerable: true, get: function () { return Timeline_1.Timeline; } });
@@ -12,10 +12,12 @@ var Slot_1 = require("./lib/Slot");
 Object.defineProperty(exports, "Slot", { enumerable: true, get: function () { return Slot_1.Slot; } });
 var SVGTransformSlot_1 = require("./lib/SVGTransformSlot");
 Object.defineProperty(exports, "SVGTransformSlot", { enumerable: true, get: function () { return SVGTransformSlot_1.SVGTransformSlot; } });
+var SVGToRotationSlot_1 = require("./lib/SVGToRotationSlot");
+Object.defineProperty(exports, "SVGToRotationSlot", { enumerable: true, get: function () { return SVGToRotationSlot_1.SVGToRotationSlot; } });
 var Runner_1 = require("./lib/Runner");
 Object.defineProperty(exports, "Runner", { enumerable: true, get: function () { return Runner_1.Runner; } });
 
-},{"./lib/Runner":2,"./lib/SVGTransformSlot":3,"./lib/Slot":4,"./lib/Timeline":5}],2:[function(require,module,exports){
+},{"./lib/Runner":2,"./lib/SVGToRotationSlot":3,"./lib/SVGTransformSlot":4,"./lib/Slot":5,"./lib/Timeline":6}],2:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Runner = void 0;
@@ -84,7 +86,54 @@ class Runner {
 }
 exports.Runner = Runner;
 
-},{"./Timeline":5}],3:[function(require,module,exports){
+},{"./Timeline":6}],3:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SVGToRotationSlot = void 0;
+const decompose_1 = require("./decompose");
+const SVGTransformSlot_1 = require("./SVGTransformSlot");
+/**
+ *  A special slot that will tranform an element to a specific rotation.
+ */
+class SVGToRotationSlot extends SVGTransformSlot_1.SVGTransformSlot {
+    constructor() {
+        super(...arguments);
+        /**
+         *  The desired rotation.
+         */
+        this._toRotation = 0;
+    }
+    /**
+     *  Set target rotation.
+     */
+    setTargetRotation(degrees) {
+        // set target rotation
+        this._toRotation = degrees;
+    }
+    /**
+     *  Start the slot.
+     */
+    start(miliseconds) {
+        // get the current base values of transforms
+        const transforms = this.elem.transform.baseVal;
+        // do we have matches? then construct inits for the matrix
+        if (transforms.numberOfItems > 0) {
+            // get the current rotation
+            const current = decompose_1.decompose(transforms.consolidate().matrix).rotation;
+            // set the target rotation
+            this.setRotation((this._toRotation - current) % 360);
+        }
+        // ok, no initial rotation so we can just set the rotation from the target
+        else
+            this.setRotation(this._toRotation);
+        // we can start the slot
+        return super.start(miliseconds);
+    }
+}
+exports.SVGToRotationSlot = SVGToRotationSlot;
+;
+
+},{"./SVGTransformSlot":4,"./decompose":7}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SVGTransformSlot = void 0;
@@ -102,11 +151,6 @@ class SVGTransformSlot extends Slot_1.Slot {
         // call the parent constructor
         super();
         /**
-         *  A possible origin position against which we would make the transform.
-         *  This makes sense only for things like skew or rotate.
-         */
-        this._origin = null;
-        /**
          *  The rotate by specific number of degrees.
          */
         this._rotation = 0;
@@ -117,6 +161,11 @@ class SVGTransformSlot extends Slot_1.Slot {
         // assign the element
         this._elem = elem;
     }
+    /**
+     *  Get the element that is transformed in this slot.
+     */
+    get elem() { return this._elem; }
+    ;
     /**
      *  Rotate the element by certain number of degrees.
      *  @param degrees
@@ -174,7 +223,7 @@ class SVGTransformSlot extends Slot_1.Slot {
 exports.SVGTransformSlot = SVGTransformSlot;
 ;
 
-},{"./Slot":4}],4:[function(require,module,exports){
+},{"./Slot":5}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Slot = void 0;
@@ -271,12 +320,13 @@ class Slot {
 }
 exports.Slot = Slot;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Timeline = void 0;
 const Slot_1 = require("./Slot");
 const SVGTransformSlot_1 = require("./SVGTransformSlot");
+const SVGToRotationSlot_1 = require("./SVGToRotationSlot");
 /**
  *  An animation timeline. A timeline allows to schedule a series of animation
  *  slots to be ran in sequence. If slots needs to be run concurently, then you
@@ -341,11 +391,39 @@ class Timeline {
         return animation;
     }
     /**
+     *  Create a rotation animation on an element to a specific degree value.
+     */
+    toRotation(elem, degrees, duration = undefined) {
+        // construct an animation
+        const animation = new SVGToRotationSlot_1.SVGToRotationSlot(elem, true);
+        // push the animation inside our timeline
+        this.push(animation);
+        // set the target rotation
+        animation.setTargetRotation(degrees);
+        // set the duration if we have one
+        if (duration)
+            animation.setDuration(duration);
+        // return the animation
+        return animation;
+    }
+    /**
      *  Rotate an element by certain number of degrees.
      */
     rotateBy(elem, degrees, duration = undefined) {
         // create rotation
         this.rotation(elem, degrees, duration);
+        // allow chaining
+        return this;
+    }
+    /**
+     *  Rotate an element to certain rotation from original position.
+     * @param elem
+     * @param degrees
+     * @param duration
+     */
+    rotateTo(elem, degrees, duration = undefined) {
+        // animate to a certain rotation
+        this.toRotation(elem, degrees, duration);
         // allow chaining
         return this;
     }
@@ -383,6 +461,75 @@ class Timeline {
 exports.Timeline = Timeline;
 ;
 
-},{"./SVGTransformSlot":3,"./Slot":4}],6:[function(require,module,exports){
+},{"./SVGToRotationSlot":3,"./SVGTransformSlot":4,"./Slot":5}],7:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.decompose = void 0;
+/**
+ *  This is a special function to decompose a matrix.
+ *
+ *  Note. A the moment of writing this code, my algebra is rusty, it's quite late, and I am fresh after
+ *  a flu. It might contain bugs. But it might be perfect. I say 50/50.
+ *
+ *  @see https://www.w3.org/TR/css-transforms-1/#decomposing-a-2d-matrix
+ */
+function decompose(matrix) {
+    // extract some variables. they will be needed later on
+    let row0x = matrix.a;
+    let row0y = matrix.b;
+    let row1x = matrix.c;
+    let row1y = matrix.d;
+    // compute translation
+    let translationX = matrix.e;
+    let translationY = matrix.f;
+    // compute scale
+    let scaleX = Math.sqrt(row0x * row0x + row0y * row0y);
+    let scaleY = Math.sqrt(row1x * row1x + row1y * row1y);
+    // if determinant is negative, one axis was flipped
+    let determinant = row0x * row1y - row0y * row1x;
+    if (determinant < 0) {
+        // flip axis
+        if (row0x < row1y)
+            scaleX = -scaleX;
+        else
+            scaleY = -scaleY;
+    }
+    // renormalize matrix to remove scale
+    if (scaleX) {
+        row0x *= 1 / scaleX;
+        row0y *= 1 / scaleX;
+    }
+    if (scaleY) {
+        row1x *= 1 / scaleY;
+        row1y *= 1 / scaleY;
+    }
+    // compute angle
+    let angle = Math.atan2(row0y, row0x);
+    // do we have a rotation? then we need to make some normalization
+    if (angle) {
+        let sn = -row0y;
+        let cs = row0x;
+        let m11 = row0x;
+        let m12 = row0y;
+        let m21 = row1x;
+        let m22 = row1y;
+        row0x = cs * m11 + sn * m21;
+        row0y = cs * m12 + sn * m22;
+        row1x = -sn * m11 + cs * m21;
+        row1y = -sn * m12 + cs * m22;
+    }
+    // convert angle to degrees
+    angle = angle * (180 / Math.PI);
+    // return the result
+    return {
+        translationX,
+        translationY,
+        rotation: angle
+    };
+}
+exports.decompose = decompose;
+;
+
+},{}],8:[function(require,module,exports){
 window.jiggly = require('./build/jiggly.js');
-},{"./build/jiggly.js":1}]},{},[6]);
+},{"./build/jiggly.js":1}]},{},[8]);
